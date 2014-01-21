@@ -1,77 +1,99 @@
-<div class="form">
-<h3><?php echo sprintf(__("%s permissions"), $aroAlias); ?></h3>
-<p><?php echo $this->Paginator->counter(array('format' => __('Page %page% of %pages%, showing %current% records out of %count% total, starting on record %start%, ending on %end%'))); ?></p>
-<div class="paging">
-	<?php echo $this->Paginator->prev('<< ' . __('previous'), array(), null, array('class'=>'disabled'));?>
- | <?php echo $this->Paginator->numbers();?> |
-	<?php echo $this->Paginator->next(__('next') . ' >>', array(), null, array('class' => 'disabled'));?>
-</div>
-<?php echo $this->Form->create('Perms'); ?>
-<table>
-	<tr>
-		<th>Action</th>
-		<?php foreach ($aros as $aro): ?>
-		<?php $aro = array_shift($aro); ?>
-		<th><?php echo h($aro[$aroDisplayField]); ?></th>
-		<?php endforeach; ?>
-	</tr>
-<?php
-$uglyIdent = Configure::read('AclManager.uglyIdent'); 
-$lastIdent = null;
-foreach ($acos as $id => $aco) {
-	$action = $aco['Action'];
-	$alias = $aco['Aco']['alias'];
-	$ident = substr_count($action, '/');
-	if ($ident <= $lastIdent && !is_null($lastIdent)) {
-		for ($i = 0; $i <= ($lastIdent - $ident); $i++) {
-			?></tr><?php
-		}
-	}
-	if ($ident != $lastIdent) {
-		?><tr class='aclmanager-ident-<?php echo $ident; ?>'><?php
-	}
-	?><td><?php echo ($ident == 1 ? "<strong>" : "" ) . ($uglyIdent ? str_repeat("&nbsp;&nbsp;", $ident) : "") . h($alias) . ($ident == 1 ? "</strong>" : "" ); ?></td>
-	<?php foreach ($aros as $aro): 
-		$inherit = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}-inherit");
-		$allowed = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}"); 
-		$value = $inherit ? 'inherit' : null; 
-		$icon = $this->Html->image(($allowed ? 'test-pass-icon.png' : 'test-fail-icon.png')); ?>
-		<td><?php echo $icon . " " . $this->Form->select("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}", array(array('inherit' => __('Inherit'), 'allow' => __('Allow'), 'deny' => __('Deny'))), array('empty' => __('No change'), 'value' => $value)); ?></td>
-	<?php endforeach; ?>
-<?php 
-	$lastIdent = $ident;
-}
-for ($i = 0; $i <= $lastIdent; $i++) {
-	?></tr><?php
-}
-?></table>
-<?php
-echo $this->Form->end(__("Save"));
-?>
-<p><?php echo $this->Paginator->counter(array('format' => __('Page %page% of %pages%, showing %current% records out of %count% total, starting on record %start%, ending on %end%'))); ?></p>
-<div class="paging">
-	<?php echo $this->Paginator->prev('<< ' . __('previous'), array(), null, array('class'=>'disabled'));?>
- | <?php echo $this->Paginator->numbers();?> |
-	<?php echo $this->Paginator->next(__('next') . ' >>', array(), null, array('class' => 'disabled'));?>
-</div>
-</div>
-<div class="actions">
-	<h3><?php echo __('Manage for'); ?></h3>
+<div id="page-container" class="row">
+	
+	<div id="sidebar" class="col-sm-3">
+		
+		<div class="actions">
+			
+			<ul class="list-group">	
+
 	<?php 
-	$aroModels = Configure::read("AclManager.aros");
-	if ($aroModels > 1): ?>
-		<ul><?php foreach ($aroModels as $aroModel): ?>
-			<li><?php echo $this->Html->link($aroModel, array('aro' => $aroModel)); ?></li>
+		$aroModels = Configure::read("AclManager.aros"); 
+		$aroModels = (empty($aroModels)) ? (array()) : ($aroModels);
+	?>
+		<?php foreach ($aroModels as $aroModel): ?>
+			<li class="list-group-item">
+				<?php echo $this->Html->link(__('%s Permissions', $aroModel), array('aro' => $aroModel)); ?>
+			</li>
 		<?php endforeach; ?>
-		</ul>
-	<?php endif; ?>
-	<h3><?php echo __('Actions'); ?></h3>
-	<ul>
-		<li><?php echo $this->Html->link(__('< Back'), array('action' => 'index')); ?></li>
-		<li><?php echo $this->Html->link(__('Manage permissions'), array('action' => 'permissions')); ?></li>
-		<li><?php echo $this->Html->link(__('Update ACOs'), array('action' => 'update_acos')); ?></li>
-		<li><?php echo $this->Html->link(__('Update AROs'), array('action' => 'update_aros')); ?></li>
-		<li><?php echo $this->Html->link(__('Drop ACOs/AROs'), array('action' => 'drop'), array(), __("Do you want to drop all ACOs and AROs?")); ?></li>
-		<li><?php echo $this->Html->link(__('Drop permissions'), array('action' => 'drop_perms'), array(), __("Do you want to drop all the permissions?")); ?></li>
-	</ul>
+		<li class="list-group-item"><?php echo $this->Html->link(__('Update ACOs'), array('action' => 'update_acos')); ?></li>
+		<li class="list-group-item"><?php echo $this->Html->link(__('Update AROs'), array('action' => 'update_aros')); ?></li>
+		<!--<li class="list-group-item"><?php echo $this->Html->link(__('Drop ACOs/AROs'), array('action' => 'drop'), array(), __("Do you want to drop all ACOs and AROs?")); ?></li>
+		<li class="list-group-item"><?php echo $this->Html->link(__('Drop permissions'), array('action' => 'drop_perms'), array(), __("Do you want to drop all the permissions?")); ?></li>-->
+				
+			</ul><!-- /.list-group -->
+			
+		</div><!-- /.actions -->
+		
+	</div><!-- /#sidebar .span3 -->
+
+	<div id="page-content" class="col-sm-9">
+
+		<div class="permissions index">
+	
+		<div class="page-header">
+			<h2><?php echo __("%s permissions", $aroAlias); ?></h2>
+		</div>
+
+<div class="form">
+<?php echo $this->Form->create('Perms'); ?>
+<div class="bordered">
+<?php echo $this->Form->button(__('Save Changes'), 
+			array('class' => 'btn btn-primary', 'title' => __('Save Changes'))); 
+?>
 </div>
+<div class="table-responsive">
+<table cellpadding="0" cellspacing="0" class="table table-bordered">
+	<thead>
+		<tr>
+			<th>Action</th>
+			<?php foreach ($aros as $aro): ?>
+			<?php $aro = array_shift($aro); ?>
+			<th><?php echo h($aro[$aroDisplayField]); ?></th>
+			<?php endforeach; ?>
+		</tr>
+	</thead>
+	<tbody>
+<?php foreach ($acos as $id => $aco):
+	$action = $aco['Action'];
+?>
+	<tr class="<?php echo (substr_count($action, '/') === 1) ? ('active isbold') : (''); ?>">
+		<td>
+			<?php echo h($aco['Aco']['alias']); ?>
+		</td>
+
+<?php foreach ($aros as $aro): 
+	$inherit = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}-inherit");
+	$allowed = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}"); 
+	$value = $inherit ? 'inherit' : null; 
+	$icon = $this->Html->image(($allowed ? 'test-pass-icon.png' : 'test-fail-icon.png')); ?>
+	<td><?php echo $icon . " " . $this->Form->select("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}", array(array('inherit' => __('Inherit'), 'allow' => __('Allow'), 'deny' => __('Deny'))), array('empty' => __('No change'), 'value' => $value)); ?></td>
+<?php endforeach; ?>
+
+	</tr>
+		
+<?php endforeach; ?>
+	</tbody>
+	</table>
+	<?php echo $this->Form->end(); ?>
+</div><!-- /.table-responsive -->
+
+<p><small><?php
+	echo $this->Paginator->counter(array(
+	'format' => __('Page {:page} of {:pages}, showing {:current} records out of {:count} total, starting on record {:start}, ending on {:end}')
+	));
+	?></small></p>
+
+	<ul class="pagination">
+		<?php
+		echo $this->Paginator->prev('< ' . __('Previous'), array('tag' => 'li'), null, array('class' => 'disabled', 'tag' => 'li', 'disabledTag' => 'a'));
+		echo $this->Paginator->numbers(array('separator' => '', 'currentTag' => 'a', 'tag' => 'li', 'currentClass' => 'disabled'));
+		echo $this->Paginator->next(__('Next') . ' >', array('tag' => 'li'), null, array('class' => 'disabled', 'tag' => 'li', 'disabledTag' => 'a'));
+		?>
+	</ul><!-- /.pagination -->
+</div>
+
+		</div><!-- /.index -->
+	
+	</div><!-- /#page-content .col-sm-9 -->
+
+</div><!-- /#page-container .row-fluid -->
