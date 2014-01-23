@@ -13,7 +13,7 @@
  * @license       MIT License (http://www.opensource.org/licenses/mit-license.php)
  */
  
-class AclController extends AclManagerAppController {
+class AclManagerController extends AclManagerAppController {
 
 	public $paginate = array();
 	protected $_authorizer = null;
@@ -53,7 +53,7 @@ class AclController extends AclManagerAppController {
 	public function drop() {
 		$this->Acl->Aco->deleteAll(array("1 = 1"));
 		$this->Acl->Aro->deleteAll(array("1 = 1"));
-		$this->Session->setFlash(__("Both ACOs and AROs have been dropped"));
+		$this->Session->setFlash(__("Both ACOs and AROs have been dropped"), 'flash/success');
 		$this->redirect(array("action" => "index"));
 	}
 	
@@ -62,17 +62,11 @@ class AclController extends AclManagerAppController {
 	 */
 	public function drop_perms() {
 		if ($this->Acl->Aro->Permission->deleteAll(array("1 = 1"))) {
-			$this->Session->setFlash(__("Permissions dropped"));
+			$this->Session->setFlash(__("Permissions dropped"), 'flash/success');
 		} else {
-			$this->Session->setFlash(__("Error while trying to drop permissions"));
+			$this->Session->setFlash(__("Error while trying to drop permissions"), 'flash/error');
 		}
 		$this->redirect(array("action" => "index"));
-	}
-
-	/**
-	 * Index action
-	 */
-	public function index() {
 	}
 
 	/**
@@ -293,7 +287,7 @@ class AclController extends AclManagerAppController {
 			$this->Acl->Aco->deleteAll(array('Aco.id' => $acoIds));
 		}
 		
-		$this->Session->setFlash(sprintf(__("%d ACOs have been created/updated"), $count));
+		$this->Session->setFlash(sprintf(__("%d ACOs have been created/updated"), $count), 'flash/success');
 		$this->redirect($this->request->referer());
 	}
 
@@ -367,7 +361,7 @@ class AclController extends AclManagerAppController {
 			}
 		}
 		
-		$this->Session->setFlash(sprintf(__("%d AROs have been created"), $count));
+		$this->Session->setFlash(sprintf(__("%d AROs have been created"), $count), 'flash/success');
 		$this->redirect($this->request->referer());
 	}
 
@@ -471,7 +465,7 @@ class AclController extends AclManagerAppController {
 			break;
 		}
 		if (empty($this->_authorizer)) {
-			$this->Session->setFlash(__("ActionAuthorizer could not be found"));
+			$this->Session->setFlash(__("ActionAuthorizer could not be found"), 'flash/error');
 			$this->redirect($this->referer());
 		}
 		return $this->_authorizer;
