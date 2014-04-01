@@ -9,6 +9,7 @@
 	<?php 
 		$aroModels = Configure::read("AclManager.aros"); 
 		$aroModels = (empty($aroModels)) ? (array()) : ($aroModels);
+		$dataLevel = 0;
 	?>
 		<?php foreach ($aroModels as $aroModel): ?>
 			<li class="list-group-item">
@@ -55,6 +56,7 @@
 	<tbody>
 <?php foreach ($acos as $id => $aco):
 	$action = $aco['Action'];
+	$dataLevel =+ 1;
 ?>
 	<tr class="<?php echo (substr_count($action, '/') === 1) ? ('active isbold') : (''); ?>">
 		<td>
@@ -66,7 +68,7 @@
 	$allowed = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}"); 
 	$value = $inherit ? 'inherit' : null; 
 	$icon = $this->Html->image(($allowed ? 'test-pass-icon.png' : 'test-fail-icon.png')); ?>
-	<td><?php echo $icon . " " . $this->Form->select("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}", array(array('inherit' => __('Inherit'), 'allow' => __('Allow'), 'deny' => __('Deny'))), array('empty' => __('No change'), 'value' => $value)); ?></td>
+	<td data-level='<?php echo $dataLevel; ?>' data-controller='<?php echo "Perms" . str_replace("/", ":", $action) ; ?>'><?php echo $icon . " " . $this->Form->select("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}", array(array('inherit' => __('Inherit'), 'allow' => __('Allow'), 'deny' => __('Deny'))), array('empty' => __('No change'), 'value' => $value)); ?></td>
 <?php endforeach; ?>
 
 	</tr>
@@ -97,3 +99,5 @@
 	</div><!-- /#page-content .col-sm-9 -->
 
 </div><!-- /#page-container .row-fluid -->
+
+<?php	echo	$this->Html->script('/AclManager/js/changePermissionsIcons.js'); ?>
