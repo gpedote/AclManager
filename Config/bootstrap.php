@@ -20,6 +20,11 @@
 Configure::write('AclManager.aros', array('Group', 'User'));
 
 /**
+ * Aliases to write into ARO table
+ */
+// Configure::write('AclManager.aro_aliases', array('Group' => 'name', 'User' => 'username'));
+
+/**
  * Limit used to paginate AROs
  * Replace {alias} with ARO alias
  * Configure::write('AclManager.{alias}.limit', 3)
