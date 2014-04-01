@@ -18,6 +18,7 @@
 <?php
 $uglyIdent = Configure::read('AclManager.uglyIdent');
 $lastIdent = null;
+$permissionGroup = 0;
 foreach ($acos as $id => $aco) {
 	$action = $aco['Action'];
 	$alias = $aco['Aco']['alias'];
@@ -27,9 +28,11 @@ foreach ($acos as $id => $aco) {
 			?></tr><?php
 		}
 	}
-	if ($ident != $lastIdent) {
-		?><tr class='aclmanager-ident-<?php echo $ident; ?>'><?php
+	
+	if ($ident == 1) {
+		$permissionGroup = $permissionGroup +1;
 	}
+	?><tr><?php
 	?><td><?php echo ($ident == 1 ? "<strong>" : "" ) . ($uglyIdent ? str_repeat("&nbsp;&nbsp;", $ident) : "") . h($alias) . ($ident == 1 ? "</strong>" : "" ); ?></td>
 	<?php foreach ($aros as $aro):
 		$inherit = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}-inherit");
@@ -76,3 +79,6 @@ echo $this->Form->end(__("Save"));
 		<li><?php echo $this->Html->link(__('Drop permissions'), array('action' => 'drop_perms'), array(), __("Do you want to drop all the permissions?")); ?></li>
 	</ul>
 </div>
+
+<?php	echo	$this->Html->script('/AclManager/js/changePermissionsIcons.js'); ?>
+				
