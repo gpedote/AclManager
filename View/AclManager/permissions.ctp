@@ -37,11 +37,6 @@
 
 <div class="form">
 <?php echo $this->Form->create('Perms'); ?>
-<div class="bordered">
-<?php echo $this->Form->button(__('Save Changes'), 
-			array('class' => 'btn btn-primary', 'title' => __('Save Changes'))); 
-?>
-</div>
 <div class="table-responsive">
 <table cellpadding="0" cellspacing="0" class="table table-bordered">
 	<thead>
@@ -56,9 +51,14 @@
 	<tbody>
 <?php foreach ($acos as $id => $aco):
 	$action = $aco['Action'];
-	$dataLevel =+ 1;
+
+	// Check if is a parent ACO
+	$isParent = (substr_count($action, '/') === 1) ? (true) : (false);
+	if ($isParent) {
+		$dataLevel++;
+	}
 ?>
-	<tr class="<?php echo (substr_count($action, '/') === 1) ? ('active isbold') : (''); ?>">
+	<tr class="<?php echo ($isParent) ? ('active isbold') : (''); ?>">
 		<td>
 			<?php echo h($aco['Aco']['alias']); ?>
 		</td>
@@ -66,16 +66,35 @@
 <?php foreach ($aros as $aro): 
 	$inherit = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}-inherit");
 	$allowed = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}"); 
-	$value = $inherit ? 'inherit' : null; 
-	$icon = $this->Html->image(($allowed ? 'test-pass-icon.png' : 'test-fail-icon.png')); ?>
-	<td data-level='<?php echo $dataLevel; ?>' data-controller='<?php echo "Perms" . str_replace("/", ":", $action) ; ?>'><?php echo $icon . " " . $this->Form->select("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}", array(array('inherit' => __('Inherit'), 'allow' => __('Allow'), 'deny' => __('Deny'))), array('empty' => __('No change'), 'value' => $value)); ?></td>
+	$value = ($inherit) ? ('inherit') : (null); 
+	$icon = ($allowed) ? ('fa fa-check') : ('fa fa-times'); ?>
+
+<td parent="<?php echo $isParent; ?>" 
+	data-level='<?php echo $dataLevel; ?>' 
+	data-controller='<?php echo "Perms" . str_replace("/", ":", $action) ; ?>'>
+<i class="<?php echo $icon;?>"></i>
+<?php $this->Form->select("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}", 
+	array(
+		array(
+			'inherit' => __('Inherit'), 
+			'allow' => __('Allow'), 
+			'deny' => __('Deny')
+		)
+	), array('empty' => __('No change'), 'value' => $value)); ?>
+</td>
 <?php endforeach; ?>
 
 	</tr>
 		
 <?php endforeach; ?>
 	</tbody>
-	</table>
+</table>
+
+<div class="bordered">
+	<?php echo $this->Form->button(__('Save Changes'), 
+				array('class' => 'btn btn-primary', 'title' => __('Save Changes'))); 
+	?>
+</div>
 	<?php echo $this->Form->end(); ?>
 </div><!-- /.table-responsive -->
 
@@ -99,5 +118,3 @@
 	</div><!-- /#page-content .col-sm-9 -->
 
 </div><!-- /#page-container .row-fluid -->
-
-<?php	echo	$this->Html->script('/AclManager/js/changePermissionsIcons.js'); ?>
