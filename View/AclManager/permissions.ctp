@@ -6,16 +6,16 @@
 			
 			<ul class="list-group">	
 
-	<?php 
-		$aroModels = Configure::read("AclManager.aros"); 
-		$aroModels = (empty($aroModels)) ? (array()) : ($aroModels);
-		$dataLevel = 0;
-	?>
-		<?php foreach ($aroModels as $aroModel): ?>
-			<li class="list-group-item">
-				<?php echo $this->Html->link(__('%s Permissions', $aroModel), array('aro' => $aroModel)); ?>
-			</li>
-		<?php endforeach; ?>
+<?php 
+$aroModels = Configure::read("AclManager.aros"); 
+$aroModels = (empty($aroModels)) ? (array()) : ($aroModels);
+$dataLevel = 0;
+
+foreach ($aroModels as $aroModel): ?>
+	<li class="list-group-item">
+		<?php echo $this->Html->link(__('%s Permissions', $aroModel), array('aro' => $aroModel)); ?>
+	</li>
+<?php endforeach; ?>
 		<li class="list-group-item"><?php echo $this->Html->link(__('Update ACOs'), array('action' => 'update_acos')); ?></li>
 		<li class="list-group-item"><?php echo $this->Html->link(__('Update AROs'), array('action' => 'update_aros')); ?></li>
 		<!--<li class="list-group-item"><?php echo $this->Html->link(__('Drop ACOs/AROs'), array('action' => 'drop'), array(), __("Do you want to drop all ACOs and AROs?")); ?></li>
@@ -106,11 +106,12 @@
 	<?php echo $this->Form->end(); ?>
 </div><!-- /.table-responsive -->
 
-<p><small><?php
+<p><small>
+<?php
 	echo $this->Paginator->counter(array(
 	'format' => __('Page {:page} of {:pages}, showing {:current} records out of {:count} total, starting on record {:start}, ending on {:end}')
 	));
-	?></small></p>
+?></small></p>
 
 	<ul class="pagination">
 		<?php
