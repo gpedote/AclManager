@@ -499,11 +499,6 @@ class AclManagerController extends AclManagerAppController {
 			unset($objects['Cake'][$unsetIndex]);
 		}
 
-		// App::objects does not return PagesController
-		if (!in_array('PagesController', $objects['Cake'])) {
-		    array_unshift($objects['Cake'], 'PagesController');
-		}
-
 		// Getting Plugins controllers
 		$plugins = CakePlugin::loaded();
 		foreach ($plugins as $plugin) {
