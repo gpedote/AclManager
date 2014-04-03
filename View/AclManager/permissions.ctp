@@ -67,7 +67,15 @@
 	$inherit = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}-inherit");
 	$allowed = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}"); 
 	$value = ($inherit) ? ('inherit') : (null); 
-	$icon = ($allowed) ? ('fa fa-check') : ('fa fa-times'); ?>
+
+	$icon = '';
+	if ($inherit) {
+		$icon = 'fa fa-arrow-up';
+	} else {
+		$icon = ($allowed) ? ('fa fa-check') : ('fa fa-times');
+	}
+	
+ ?>
 
 <td isparent="<?php echo $isParent ? 'true' : 'false'; ?>" 
 	data-level='<?php echo $dataLevel; ?>' 
