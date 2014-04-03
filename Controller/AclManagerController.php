@@ -62,7 +62,7 @@ class AclManagerController extends AclManagerAppController {
  *
  * @return void
  */
-	public function drop_perms() {
+	public function dropPerms() {
 		if ($this->Acl->Aro->Permission->deleteAll(array("1 = 1"))) {
 			$this->Session->setFlash(__("Permissions dropped"), 'flash/success');
 		} else {
@@ -128,7 +128,7 @@ class AclManagerController extends AclManagerAppController {
 			$acoNode = $aco['Action'];
 			foreach($aros as $aro) {
 				$aroId = $aro[$Aro->alias][$Aro->primaryKey];
-				$evaluate = $this->_evaluate_permissions($permKeys, array('id' => $aroId, 'alias' => $Aro->alias), $aco, $key);
+				$evaluate = $this->_evaluatePermissions($permKeys, array('id' => $aroId, 'alias' => $Aro->alias), $aco, $key);
 
 				$perms[str_replace('/', ':', $acoNode)][$Aro->alias . ":" . $aroId . '-inherit'] = $evaluate['inherited'];
 				$perms[str_replace('/', ':', $acoNode)][$Aro->alias . ":" . $aroId] = $evaluate['allowed'];
@@ -147,7 +147,7 @@ class AclManagerController extends AclManagerAppController {
  *
  * @return array 
  */
-	private function _evaluate_permissions($permKeys, $aro, $aco, $aco_index) {
+	private function _evaluatePermissions($permKeys, $aro, $aco, $aco_index) {
 		$permissions = Set::extract("/Aro[model={$aro['alias']}][foreign_key={$aro['id']}]/Permission/.", $aco);
 		$permissions = array_shift($permissions);
 
@@ -205,7 +205,7 @@ class AclManagerController extends AclManagerAppController {
 				}
 
 				// Perform lookup of parent aco
-				$evaluate = $this->_evaluate_permissions($permKeys, $aro, $parent_aco, $key);
+				$evaluate = $this->_evaluatePermissions($permKeys, $aro, $parent_aco, $key);
 
 				// Store result in acos array so we need less recursion for the next lookup
 				$this->acos[$key]['evaluated'][$aro['id']] = $evaluate;
@@ -228,7 +228,7 @@ class AclManagerController extends AclManagerAppController {
  *
  * @return void
  */
-	public function update_acos() {
+	public function updateAcos() {
 		$count = 0;
 		$knownAcos = $this->_getAcos();
 
@@ -300,7 +300,7 @@ class AclManagerController extends AclManagerAppController {
  *
  * @return void
  */
-	public function update_aros() {
+	public function updateAros() {
 
 		// Debug off to enable redirect
 		Configure::write('debug', 0);

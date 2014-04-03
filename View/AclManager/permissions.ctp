@@ -16,10 +16,10 @@ foreach ($aroModels as $aroModel): ?>
 		<?php echo $this->Html->link(__('%s Permissions', $aroModel), array('aro' => $aroModel)); ?>
 	</li>
 <?php endforeach; ?>
-		<li class="list-group-item"><?php echo $this->Html->link(__('Update ACOs'), array('action' => 'update_acos')); ?></li>
-		<li class="list-group-item"><?php echo $this->Html->link(__('Update AROs'), array('action' => 'update_aros')); ?></li>
+		<li class="list-group-item"><?php echo $this->Html->link(__('Update ACOs'), array('action' => 'updateAcos')); ?></li>
+		<li class="list-group-item"><?php echo $this->Html->link(__('Update AROs'), array('action' => 'updateAros')); ?></li>
 		<!--<li class="list-group-item"><?php echo $this->Html->link(__('Drop ACOs/AROs'), array('action' => 'drop'), array(), __("Do you want to drop all ACOs and AROs?")); ?></li>
-		<li class="list-group-item"><?php echo $this->Html->link(__('Drop permissions'), array('action' => 'drop_perms'), array(), __("Do you want to drop all the permissions?")); ?></li>-->
+		<li class="list-group-item"><?php echo $this->Html->link(__('Drop permissions'), array('action' => 'dropPerms'), array(), __("Do you want to drop all the permissions?")); ?></li>-->
 				
 			</ul><!-- /.list-group -->
 			
