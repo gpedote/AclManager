@@ -51,9 +51,13 @@ class AclManagerController extends AclManagerAppController {
  * @return void
  */
 	public function drop() {
-		$this->Acl->Aco->deleteAll(array("1 = 1"));
-		$this->Acl->Aro->deleteAll(array("1 = 1"));
-		$this->Session->setFlash(__("Both ACOs and AROs have been dropped"), 'flash/success');
+		$acoDelete = $this->Acl->Aco->deleteAll(array("1 = 1"));
+		$aroDelete = $this->Acl->Aro->deleteAll(array("1 = 1"));
+		if ($acoDelete && $aroDelete) {
+			$this->Session->setFlash(__("Both ACOs and AROs have been dropped"), 'flash/success');
+		} else {
+			$this->Session->setFlash(__("Error while trying to drop ACOs/AROs"), 'flash/error');
+		}
 		$this->redirect(array("action" => "index"));
 	}
 
@@ -147,7 +151,7 @@ class AclManagerController extends AclManagerAppController {
  *
  * @return array 
  */
-	private function _evaluatePermissions($permKeys, $aro, $aco, $aco_index) {
+	private function _evaluatePermissions($permKeys, $aro, $aco, $acoIndex) {
 		$permissions = Set::extract("/Aro[model={$aro['alias']}][foreign_key={$aro['id']}]/Permission/.", $aco);
 		$permissions = array_shift($permissions);
 
@@ -183,7 +187,7 @@ class AclManagerController extends AclManagerAppController {
 				$acoNode = (isset($aco['Action'])) ? $aco['Action'] : null;
 				$aroNode = array('model' => $aro['alias'], 'foreign_key' => $aro['id']);
 				$allowed = $this->Acl->check($aroNode, $acoNode);
-				$this->acos[$aco_index]['evaluated'][$aro['id']] = array(
+				$this->acos[$acoIndex]['evaluated'][$aro['id']] = array(
 					'allowed' => $allowed,
 					'inherited' => true
 				);
@@ -194,18 +198,18 @@ class AclManagerController extends AclManagerAppController {
 				 */
 				foreach ($this->acos as $key => $a) {
 					if ($a['Aco']['id'] == $aco['Aco']['parent_id']) {
-						$parent_aco = $a;
+						$parentAco = $a;
 						break;
 					}
 				}
 
 				// Return cached result if present
-				if (isset($parent_aco['evaluated'][$aro['id']])) {
-					return $parent_aco['evaluated'][$aro['id']];
+				if (isset($parentAco['evaluated'][$aro['id']])) {
+					return $parentAco['evaluated'][$aro['id']];
 				}
 
 				// Perform lookup of parent aco
-				$evaluate = $this->_evaluatePermissions($permKeys, $aro, $parent_aco, $key);
+				$evaluate = $this->_evaluatePermissions($permKeys, $aro, $parentAco, $key);
 
 				// Store result in acos array so we need less recursion for the next lookup
 				$this->acos[$key]['evaluated'][$aro['id']] = $evaluate;
@@ -389,11 +393,11 @@ class AclManagerController extends AclManagerAppController {
  *
  * @return node
  */
-	protected function _buildAcoNode($alias, $parent_id = null) {
-		if (is_array($parent_id)) {
-			$parent_id = $parent_id[0]['Aco']['id'];
+	protected function _buildAcoNode($alias, $parentId = null) {
+		if (is_array($parentId)) {
+			$parentId = $parentId[0]['Aco']['id'];
 		}
-		$this->Acl->Aco->create(array('alias' => $alias, 'parent_id' => $parent_id));
+		$this->Acl->Aco->create(array('alias' => $alias, 'parent_id' => $parentId));
 		$this->Acl->Aco->save();
 		return array(array('Aco' => array('id' => $this->Acl->Aco->id)));
 	}
