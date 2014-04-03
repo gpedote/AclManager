@@ -6,16 +6,16 @@
 			
 			<ul class="list-group">	
 
-	<?php 
-		$aroModels = Configure::read("AclManager.aros"); 
-		$aroModels = (empty($aroModels)) ? (array()) : ($aroModels);
-		$dataLevel = 0;
-	?>
-		<?php foreach ($aroModels as $aroModel): ?>
-			<li class="list-group-item">
-				<?php echo $this->Html->link(__('%s Permissions', $aroModel), array('aro' => $aroModel)); ?>
-			</li>
-		<?php endforeach; ?>
+<?php 
+$aroModels = Configure::read("AclManager.aros"); 
+$aroModels = (empty($aroModels)) ? (array()) : ($aroModels);
+$dataLevel = 0;
+
+foreach ($aroModels as $aroModel): ?>
+	<li class="list-group-item">
+		<?php echo $this->Html->link(__('%s Permissions', $aroModel), array('aro' => $aroModel)); ?>
+	</li>
+<?php endforeach; ?>
 		<li class="list-group-item"><?php echo $this->Html->link(__('Update ACOs'), array('action' => 'update_acos')); ?></li>
 		<li class="list-group-item"><?php echo $this->Html->link(__('Update AROs'), array('action' => 'update_aros')); ?></li>
 		<!--<li class="list-group-item"><?php echo $this->Html->link(__('Drop ACOs/AROs'), array('action' => 'drop'), array(), __("Do you want to drop all ACOs and AROs?")); ?></li>
@@ -37,11 +37,6 @@
 
 <div class="form">
 <?php echo $this->Form->create('Perms'); ?>
-<div class="bordered">
-<?php echo $this->Form->button(__('Save Changes'), 
-			array('class' => 'btn btn-primary', 'title' => __('Save Changes'))); 
-?>
-</div>
 <div class="table-responsive">
 <table cellpadding="0" cellspacing="0" class="table table-bordered">
 	<thead>
@@ -56,9 +51,14 @@
 	<tbody>
 <?php foreach ($acos as $id => $aco):
 	$action = $aco['Action'];
-	$dataLevel =+ 1;
+
+	// Check if is a parent ACO
+	$isParent = (substr_count($action, '/') === 1) ? (true) : (false);
+	if ($isParent) {
+		$dataLevel++;
+	}
 ?>
-	<tr class="<?php echo (substr_count($action, '/') === 1) ? ('active isbold') : (''); ?>">
+	<tr class="<?php echo ($isParent) ? ('active isbold') : (''); ?>">
 		<td>
 			<?php echo h($aco['Aco']['alias']); ?>
 		</td>
@@ -66,24 +66,52 @@
 <?php foreach ($aros as $aro): 
 	$inherit = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}-inherit");
 	$allowed = $this->Form->value("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}"); 
-	$value = $inherit ? 'inherit' : null; 
-	$icon = $this->Html->image(($allowed ? 'test-pass-icon.png' : 'test-fail-icon.png')); ?>
-	<td data-level='<?php echo $dataLevel; ?>' data-controller='<?php echo "Perms" . str_replace("/", ":", $action) ; ?>'><?php echo $icon . " " . $this->Form->select("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}", array(array('inherit' => __('Inherit'), 'allow' => __('Allow'), 'deny' => __('Deny'))), array('empty' => __('No change'), 'value' => $value)); ?></td>
+	$value = ($inherit) ? ('inherit') : (null); 
+
+	$icon = '';
+	if ($inherit) {
+		$icon = 'fa fa-arrow-up';
+	} else {
+		$icon = ($allowed) ? ('fa fa-check') : ('fa fa-times');
+	}
+	
+ ?>
+
+<td isparent="<?php echo $isParent ? 'true' : 'false'; ?>" 
+	data-level='<?php echo $dataLevel; ?>' 
+	data-parent="<?php echo "{$aroAlias}:{$aro[$aroAlias]['id']}"; ?>">
+<i class="<?php echo $icon;?>"></i>
+<?php echo $this->Form->select("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}", 
+	array(
+		array(
+			'inherit' => __('Inherit'), 
+			'allow' => __('Allow'), 
+			'deny' => __('Deny')
+		)
+	), array('empty' => __('No change'), 'value' => $value)); ?>
+</td>
 <?php endforeach; ?>
 
 	</tr>
 		
 <?php endforeach; ?>
 	</tbody>
-	</table>
+</table>
+
+<div class="bordered">
+	<?php echo $this->Form->button(__('Save Changes'), 
+				array('class' => 'btn btn-primary', 'title' => __('Save Changes'))); 
+	?>
+</div>
 	<?php echo $this->Form->end(); ?>
 </div><!-- /.table-responsive -->
 
-<p><small><?php
+<p><small>
+<?php
 	echo $this->Paginator->counter(array(
 	'format' => __('Page {:page} of {:pages}, showing {:current} records out of {:count} total, starting on record {:start}, ending on {:end}')
 	));
-	?></small></p>
+?></small></p>
 
 	<ul class="pagination">
 		<?php
@@ -94,10 +122,10 @@
 	</ul><!-- /.pagination -->
 </div>
 
+<?php echo $this->Html->script('/AclManager/js/changePermissionsIcons.js'); ?>
+
 		</div><!-- /.index -->
 	
 	</div><!-- /#page-content .col-sm-9 -->
 
 </div><!-- /#page-container .row-fluid -->
-
-<?php	echo	$this->Html->script('/AclManager/js/changePermissionsIcons.js'); ?>
