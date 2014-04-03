@@ -39,12 +39,6 @@ Configure::write('AclManager.aros', array('Group', 'User'));
 // Configure::write('AclManager.prefix', 'admin');
 
 /**
- * Ugly identation?
- * Turn off when using CSS
- */
-Configure::write('AclManager.uglyIdent', true);
-				
-/**
  * Actions to ignore when looking for new ACOs
  * Format: 'action', 'Controller/action' or 'Plugin.Controller/action'
  */
