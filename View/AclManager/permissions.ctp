@@ -70,9 +70,9 @@ foreach ($aroModels as $aroModel): ?>
 
 	$icon = '';
 	if ($inherit) {
-		$icon = 'fa fa-arrow-up';
+		$icon = 'fa fa-arrow-up text-info';
 	} else {
-		$icon = ($allowed) ? ('fa fa-check') : ('fa fa-times');
+		$icon = ($allowed) ? ('fa fa-check text-success') : ('fa fa-times text-danger');
 	}
 	
  ?>

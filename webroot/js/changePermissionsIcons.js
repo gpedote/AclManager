@@ -10,6 +10,10 @@ if (typeof jQuery != 'undefined') {
 	$('select') .on('change', function () {
 	    select = $(this);
 	    tableCell = $(this) .parent();
+	    deny = 'fa fa-times text-danger';
+	    allow = 'fa fa-check text-success';
+	    inherit = 'fa fa-arrow-up text-info';
+	    noChange = 'fa fa-minus text-warning';
 	    if (tableCell.attr('isparent') === 'true') {
 	        dataLevel = tableCell.attr('data-level');
 	        dataParent = tableCell.attr('data-parent');
@@ -21,19 +25,19 @@ if (typeof jQuery != 'undefined') {
 	                switch (select.val()) {
 	                    case 'deny':
 	                        $(this).children('select') .val('deny');
-	                        $(this).children('i') .addClass('fa fa-times');
+	                        $(this).children('i') .addClass(deny);
 	                    break;
 	                    case 'allow':
 	                        $(this).children('select') .val('allow');
-	                        $(this).children('i') .addClass('fa fa-check');
+	                        $(this).children('i') .addClass(allow);
 	                    break;
 	                    case 'inherit':
 	                        $(this).children('select') .val('inherit');
-	                        $(this).children('i') .addClass('fa fa-arrow-up');
+	                        $(this).children('i') .addClass(inherit);
 	                    break;
 	                    case '':
 	                        $(this).children('select') .val('');
-	                        $(this).children('i') .addClass('fa fa-minus');
+	                        $(this).children('i') .addClass(noChange);
 	                    break;
 	                }
 	            }
@@ -42,16 +46,16 @@ if (typeof jQuery != 'undefined') {
 	        tableCell.children('i') .removeClass();
 	        switch (select.val()) {
 	            case 'deny':
-	                tableCell.children('i') .addClass('fa fa-times');
+	                tableCell.children('i') .addClass(deny);
 	            break;
 	            case 'allow':
-	                tableCell.children('i') .addClass('fa fa-check');
+	                tableCell.children('i') .addClass(allow);
 	            break;
 	            case 'inherit':
-	                tableCell.children('i') .addClass('fa fa-arrow-up');
+	                tableCell.children('i') .addClass(inherit);
 	            break;
 	            case '':
-	                tableCell.children('i') .addClass('fa fa-minus');
+	                tableCell.children('i') .addClass(noChange);
 	            break;
 	        }
 	    }
