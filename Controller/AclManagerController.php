@@ -14,8 +14,7 @@
  */
 class AclManagerController extends AclManagerAppController {
 
-	public $paginate = array();
-	protected $_authorizer = null;
+    protected $_authorizer = null;
 	protected $acos = array();
 
 /**
@@ -32,18 +31,18 @@ class AclManagerController extends AclManagerAppController {
 			$this->loadModel($aro);
 		}
 
-		/**
-		 * Pagination
-		 */
-		$aros = Configure::read('AclManager.aros');
+		// Pagination
+ 		$aros = Configure::read('AclManager.aros');
+ 		$paginatorSettings = array();
 		foreach ($aros as $aro) {
 			$limit = Configure::read("AclManager.{$aro}.limit");
 			$limit = empty($limit) ? 4 : $limit;
-			$this->paginate[$this->{$aro}->alias] = array(
+			$paginatorSettings[$this->{$aro}->alias] = array(
 				'recursive' => -1,
 				'limit' => $limit
 			);
 		}
+		$this->Paginator->settings = $paginatorSettings;
 	}
 
 /**
@@ -105,7 +104,7 @@ class AclManagerController extends AclManagerAppController {
 		}
 
 		$Aro = $this->{$model};
-		$aros = $this->paginate($Aro->alias);
+		$aros = $this->Paginator->paginate($Aro->alias);
 		$permKeys = $this->_getKeys();
 
 		// Build permissions info
