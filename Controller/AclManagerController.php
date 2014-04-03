@@ -14,52 +14,59 @@
  */
 class AclManagerController extends AclManagerAppController {
 
-	public $paginate = array();
-	protected $_authorizer = null;
+    protected $_authorizer = null;
 	protected $acos = array();
 
-	/**
-	 * beforeFitler
-	 */
+/**
+ * beforeFilter method
+ *
+ * @return void
+ */
 	public function beforeFilter() {
 		parent::beforeFilter();
 
-		/**
-		 * Loading required Model
-		 */
+		// Loading required Model
 		$aros = Configure::read('AclManager.models');
 		foreach ($aros as $aro) {
 			$this->loadModel($aro);
 		}
 
-		/**
-		 * Pagination
-		 */
-		$aros = Configure::read('AclManager.aros');
+		// Pagination
+ 		$aros = Configure::read('AclManager.aros');
+ 		$paginatorSettings = array();
 		foreach ($aros as $aro) {
 			$limit = Configure::read("AclManager.{$aro}.limit");
 			$limit = empty($limit) ? 4 : $limit;
-			$this->paginate[$this->{$aro}->alias] = array(
+			$paginatorSettings[$this->{$aro}->alias] = array(
 				'recursive' => -1,
 				'limit' => $limit
 			);
 		}
+		$this->Paginator->settings = $paginatorSettings;
 	}
 
-	/**
-	 * Delete everything
-	 */
+/**
+ * Delete everything
+ *
+ * @return void
+ */
 	public function drop() {
-		$this->Acl->Aco->deleteAll(array("1 = 1"));
-		$this->Acl->Aro->deleteAll(array("1 = 1"));
-		$this->Session->setFlash(__("Both ACOs and AROs have been dropped"), 'flash/success');
+		$acoDelete = $this->Acl->Aco->deleteAll(array("1 = 1"));
+		$aroDelete = $this->Acl->Aro->deleteAll(array("1 = 1"));
+		if ($acoDelete && $aroDelete) {
+			$this->Session->setFlash(__("Both ACOs and AROs have been dropped"), 'flash/success');
+		} else {
+			$this->Session->setFlash(__("Error while trying to drop ACOs/AROs"), 'flash/error');
+		}
 		$this->redirect(array("action" => "index"));
 	}
 
-	/**
-	 * Delete all permissions
-	 */
-	public function drop_perms() {
+/**
+ * Delete all permissions
+ *
+ * @return void
+ */
+	public function dropPerms() {
 		if ($this->Acl->Aro->Permission->deleteAll(array("1 = 1"))) {
 			$this->Session->setFlash(__("Permissions dropped"), 'flash/success');
 		} else {
@@ -68,9 +75,11 @@ class AclManagerController extends AclManagerAppController {
 		$this->redirect(array("action" => "index"));
 	}
 
-	/**
-	 * Manage Permissions
-	 */
+/**
+ * Manage Permissions
+ *
+ * @return void
+ */
 	public function permissions() {
 
 		// Saving permissions
@@ -83,11 +92,9 @@ class AclManagerController extends AclManagerAppController {
 					$node = array('model' => $model, 'foreign_key' => $id);
 					if ($perm == 'allow') {
 						$this->Acl->allow($node, $action);
-					}
-					elseif ($perm == 'inherit') {
+					} elseif ($perm == 'inherit') {
 						$this->Acl->inherit($node, $action);
-					}
-					elseif ($perm == 'deny') {
+					} elseif ($perm == 'deny') {
 						$this->Acl->deny($node, $action);
 					}
 				}
@@ -101,12 +108,10 @@ class AclManagerController extends AclManagerAppController {
 		}
 
 		$Aro = $this->{$model};
-		$aros = $this->paginate($Aro->alias);
+		$aros = $this->Paginator->paginate($Aro->alias);
 		$permKeys = $this->_getKeys();
 
-		/**
-		 * Build permissions info
-		 */
+		// Build permissions info
 		$this->acos = $acos = $this->Acl->Aco->find('all', array('order' => 'Aco.lft ASC', 'recursive' => 1));
 		$perms = array();
 		$parents = array();
@@ -127,7 +132,7 @@ class AclManagerController extends AclManagerAppController {
 			$acoNode = $aco['Action'];
 			foreach($aros as $aro) {
 				$aroId = $aro[$Aro->alias][$Aro->primaryKey];
-				$evaluate = $this->_evaluate_permissions($permKeys, array('id' => $aroId, 'alias' => $Aro->alias), $aco, $key);
+				$evaluate = $this->_evaluatePermissions($permKeys, array('id' => $aroId, 'alias' => $Aro->alias), $aco, $key);
 
 				$perms[str_replace('/', ':', $acoNode)][$Aro->alias . ":" . $aroId . '-inherit'] = $evaluate['inherited'];
 				$perms[str_replace('/', ':', $acoNode)][$Aro->alias . ":" . $aroId] = $evaluate['allowed'];
@@ -141,10 +146,12 @@ class AclManagerController extends AclManagerAppController {
 		$this->set(compact('acos', 'aros'));
 	}
 
-	/**
-	 * Recursive function to find permissions avoiding slow $this->Acl->check().
-	 */
-	private function _evaluate_permissions($permKeys, $aro, $aco, $aco_index) {
+/**
+ * Recursive function to find permissions avoiding slow $this->Acl->check().
+ *
+ * @return array 
+ */
+	private function _evaluatePermissions($permKeys, $aro, $aco, $acoIndex) {
 		$permissions = Set::extract("/Aro[model={$aro['alias']}][foreign_key={$aro['id']}]/Permission/.", $aco);
 		$permissions = array_shift($permissions);
 
@@ -180,29 +187,29 @@ class AclManagerController extends AclManagerAppController {
 				$acoNode = (isset($aco['Action'])) ? $aco['Action'] : null;
 				$aroNode = array('model' => $aro['alias'], 'foreign_key' => $aro['id']);
 				$allowed = $this->Acl->check($aroNode, $acoNode);
-				$this->acos[$aco_index]['evaluated'][$aro['id']] = array(
+				$this->acos[$acoIndex]['evaluated'][$aro['id']] = array(
 					'allowed' => $allowed,
 					'inherited' => true
 				);
-			}
-			else {
+			} else {
 				/**
 				 * Do not use Set::extract here. First of all it is terribly slow,
 				 * besides this we need the aco array index ($key) to cache are result.
 				 */
 				foreach ($this->acos as $key => $a) {
 					if ($a['Aco']['id'] == $aco['Aco']['parent_id']) {
-						$parent_aco = $a;
+						$parentAco = $a;
 						break;
 					}
 				}
+
 				// Return cached result if present
-				if (isset($parent_aco['evaluated'][$aro['id']])) {
-					return $parent_aco['evaluated'][$aro['id']];
+				if (isset($parentAco['evaluated'][$aro['id']])) {
+					return $parentAco['evaluated'][$aro['id']];
 				}
 
 				// Perform lookup of parent aco
-				$evaluate = $this->_evaluate_permissions($permKeys, $aro, $parent_aco, $key);
+				$evaluate = $this->_evaluatePermissions($permKeys, $aro, $parentAco, $key);
 
 				// Store result in acos array so we need less recursion for the next lookup
 				$this->acos[$key]['evaluated'][$aro['id']] = $evaluate;
@@ -219,12 +226,13 @@ class AclManagerController extends AclManagerAppController {
 		);
 	}
 
-	/**
-	 * Update ACOs
-	 * Sets the missing actions in the database
-	 */
-	public function update_acos() {
-
+/**
+ * Update ACOs
+ * Sets the missing actions in the database
+ *
+ * @return void
+ */
+	public function updateAcos() {
 		$count = 0;
 		$knownAcos = $this->_getAcos();
 
@@ -248,7 +256,7 @@ class AclManagerController extends AclManagerAppController {
 
 			// Plugin
 			$aco = $this->_action(array('plugin' => $plugin), '/:plugin/');
-			$aco = rtrim($aco, '/');		// Remove trailing slash
+			$aco = rtrim($aco, '/'); // Remove trailing slash
 			$newNode = $parentNode;
 			if ($plugin && !$newNode = $this->Acl->Aco->node($aco)) {
 				$newNode = $this->_buildAcoNode($plugin, $parentNode);
@@ -290,11 +298,13 @@ class AclManagerController extends AclManagerAppController {
 		$this->redirect($this->request->referer());
 	}
 
-	/**
-	 * Update AROs
-	 * Sets the missing AROs in the database
-	 */
-	public function update_aros() {
+/**
+ * Update AROs
+ * Sets the missing AROs in the database
+ *
+ * @return void
+ */
+	public function updateAros() {
 
 		// Debug off to enable redirect
 		Configure::write('debug', 0);
@@ -305,16 +315,13 @@ class AclManagerController extends AclManagerAppController {
 		// Over each ARO Model
 		$objects = Configure::read("AclManager.aros");
 		foreach ($objects as $object) {
-
 			$Model = $this->{$object};
-
 			$items = $Model->find('all');
-			foreach ($items as $item) {
 
+			foreach ($items as $item) {
 				$item = $item[$Model->alias];
 				$Model->create();
 				$Model->id = $item[$Model->primaryKey];
-
 				try {
 					$node = $Model->node();
 				} catch (Exception $e) {
@@ -367,9 +374,11 @@ class AclManagerController extends AclManagerAppController {
 		$this->redirect($this->request->referer());
 	}
 
-	/**
-	 * Gets the action from Authorizer
-	 */
+/**
+ * Gets the action from Authorizer
+ *
+ * @return String
+ */
 	protected function _action($request = array(), $path = '/:plugin/:controller/:action') {
 		$plugin = empty($request['plugin']) ? null : Inflector::camelize($request['plugin']) . '/';
 		$params = array_merge(array('controller' => null, 'action' => null, 'plugin' => null), $request);
@@ -379,30 +388,30 @@ class AclManagerController extends AclManagerAppController {
 		return $authorizer->action($request, $path);
 	}
 
-	/**
-	 * Build ACO node
-	 *
-	 * @return node
-	 */
-	protected function _buildAcoNode($alias, $parent_id = null) {
-		if (is_array($parent_id)) {
-			$parent_id = $parent_id[0]['Aco']['id'];
+/**
+ * Build ACO node
+ *
+ * @return node
+ */
+	protected function _buildAcoNode($alias, $parentId = null) {
+		if (is_array($parentId)) {
+			$parentId = $parentId[0]['Aco']['id'];
 		}
-		$this->Acl->Aco->create(array('alias' => $alias, 'parent_id' => $parent_id));
+		$this->Acl->Aco->create(array('alias' => $alias, 'parent_id' => $parentId));
 		$this->Acl->Aco->save();
 		return array(array('Aco' => array('id' => $this->Acl->Aco->id)));
 	}
 
-	/**
-	 * Returns all the Actions found in the Controllers
-	 *
-	 * Ignores:
-	 * - protected and private methods (starting with _)
-	 * - Controller methods
-	 * - methods matching Configure::read('AclManager.ignoreActions')
-	 *
-	 * @return array('Controller' => array('action1', 'action2', ... ))
-	 */
+/**
+ * Returns all the Actions found in the Controllers
+ *
+ * Ignores:
+ * - protected and private methods (starting with _)
+ * - Controller methods
+ * - methods matching Configure::read('AclManager.ignoreActions')
+ *
+ * @return array('Controller' => array('action1', 'action2', ... ))
+ */
 	protected function _getActions() {
 		$ignore = Configure::read('AclManager.ignoreActions');
 		$methods = get_class_methods('Controller');
@@ -413,7 +422,6 @@ class AclManagerController extends AclManagerAppController {
 		$controllers = $this->_getControllers();
 		$actions = array();
 		foreach ($controllers as $controller) {
-
 		    list($plugin, $name) = pluginSplit($controller);
 
 		    $methods = get_class_methods($name . "Controller");
@@ -425,18 +433,18 @@ class AclManagerController extends AclManagerAppController {
 			}
 			$actions[$controller] = $methods;
 		}
-
 		return $actions;
 	}
 
-	/**
-	 * Returns all the ACOs including their path
-	 */
+/**
+ * Returns all the ACOs including their path
+ *
+ * @return array
+ */
 	protected function _getAcos() {
 		$acos = $this->Acl->Aco->find('all', array('order' => 'Aco.lft ASC', 'recursive' => -1));
 		$parents = array();
 		foreach ($acos as $key => $data) {
-
 			$aco =& $acos[$key];
 			$id = $aco['Aco']['id'];
 
@@ -451,9 +459,11 @@ class AclManagerController extends AclManagerAppController {
 		return $acos;
 	}
 
-	/**
-	 * Gets the Authorizer object from Auth
-	 */
+/**
+ * Gets the Authorizer object from Auth
+ *
+ * @return authorizer object
+ */
 	protected function _getAuthorizer() {
 		if (!is_null($this->_authorizer)) {
 			return $this->_authorizer;
@@ -473,12 +483,12 @@ class AclManagerController extends AclManagerAppController {
 		return $this->_authorizer;
 	}
 
-	/**
-	 * Returns all the controllers from Cake and Plugins
-	 * Will only browse loaded plugins
-	 *
-	 * @return array('Controller1', 'Plugin.Controller2')
-	 */
+/**
+ * Returns all the controllers from Cake and Plugins
+ * Will only browse loaded plugins
+ *
+ * @return array('Controller1', 'Plugin.Controller2')
+ */
 	protected function _getControllers() {
 
 		// Getting Cake controllers
@@ -521,10 +531,12 @@ class AclManagerController extends AclManagerAppController {
 		return $return;
 	}
 
-	/**
-	 * Returns permissions keys in Permission schema
-	 * @see DbAcl::_getKeys()
-	 */
+/**
+ * Returns permissions keys in Permission schema
+ *
+ * @see DbAcl::_getKeys()
+ * @return array permission keys
+ */
 	protected function _getKeys() {
 		$keys = $this->Acl->Aro->Permission->schema();
 		$newKeys = array();
@@ -537,9 +549,11 @@ class AclManagerController extends AclManagerAppController {
 		return $newKeys;
 	}
 
-	/**
-	 * Returns an array without the corresponding action
-	 */
+/**
+ * Returns an array without the corresponding action
+ *
+ * @return array
+ */
 	protected function _removeActionFromAcos($acos, $action) {
 		foreach ($acos as $key => $aco) {
 			if ($aco['Aco']['action'] == $action) {

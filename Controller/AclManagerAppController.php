@@ -15,21 +15,27 @@
 
 class AclManagerAppController extends AppController {
 
-	/**
-	 * beforeFitler
-	 */
+/**
+ * Components
+ *
+ * @var array
+ */
+    public $components = array('Paginator');
+    
+/**
+ * beforeFilter method
+ *
+ * @return void
+ */
 	public function beforeFilter() {
 		parent::beforeFilter();
-		
-		/**
-		 * Force prefix
-		 */
+
+		// Force prefix
 		$prefix = Configure::read('AclManager.prefix');
 		$routePrefix = isset($this->request->params['prefix']) ? $this->request->params['prefix'] : false;
 		if ($prefix && $prefix != $routePrefix) {
 			$this->redirect($this->request->referer());
-		} 
-		elseif ($prefix) {
+		} elseif ($prefix) {
 			$this->request->params['action'] = str_replace($prefix . "_", "", $this->request->params['action']);
 			$this->view = str_replace($prefix . "_", "", $this->view);
 		}
