@@ -69,11 +69,11 @@
 	$value = ($inherit) ? ('inherit') : (null); 
 	$icon = ($allowed) ? ('fa fa-check') : ('fa fa-times'); ?>
 
-<td parent="<?php echo $isParent; ?>" 
+<td isparent="<?php echo $isParent ? 'true' : 'false'; ?>" 
 	data-level='<?php echo $dataLevel; ?>' 
-	data-controller='<?php echo "Perms" . str_replace("/", ":", $action) ; ?>'>
+	data-parent="<?php echo "{$aroAlias}:{$aro[$aroAlias]['id']}"; ?>">
 <i class="<?php echo $icon;?>"></i>
-<?php $this->Form->select("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}", 
+<?php echo $this->Form->select("Perms." . str_replace("/", ":", $action) . ".{$aroAlias}:{$aro[$aroAlias]['id']}", 
 	array(
 		array(
 			'inherit' => __('Inherit'), 
@@ -112,6 +112,8 @@
 		?>
 	</ul><!-- /.pagination -->
 </div>
+
+<?php echo $this->Html->script('/AclManager/js/changePermissionsIcons.js'); ?>
 
 		</div><!-- /.index -->
 	
