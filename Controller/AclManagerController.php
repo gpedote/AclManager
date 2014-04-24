@@ -12,10 +12,24 @@
  * @link          http://github.com/FMCorz/AclManager
  * @license       MIT License (http://www.opensource.org/licenses/mit-license.php)
  */
+App::uses('AclManager', 'AclManager.Lib');
+
 class AclManagerController extends AclManagerAppController {
 
     protected $_authorizer = null;
-	protected $acos = array();
+
+/**
+ * AclManager instance
+ */
+	public $AclManager;
+
+/**
+ * Constructor
+ */
+	public function __construct($request = null, $response = null) {
+		parent::__construct($request, $response);
+		$this->AclManager = new AclManager();
+	}
 
 /**
  * beforeFilter method
@@ -112,9 +126,9 @@ class AclManagerController extends AclManagerAppController {
 		$permKeys = $this->_getKeys();
 
 		// Build permissions info
-		$this->acos = $acos = $this->Acl->Aco->find('all', array('order' => 'Aco.lft ASC', 'recursive' => 1));
 		$perms = array();
 		$parents = array();
+		$acos = $this->Acl->Aco->find('all', array('order' => 'Aco.lft ASC', 'recursive' => 1));
 		foreach ($acos as $key => $data) {
 			$aco =& $acos[$key];
 			$aco = array('Aco' => $data['Aco'], 'Aro' => $data['Aro'], 'Action' => array());
@@ -132,7 +146,7 @@ class AclManagerController extends AclManagerAppController {
 			$acoNode = $aco['Action'];
 			foreach($aros as $aro) {
 				$aroId = $aro[$Aro->alias][$Aro->primaryKey];
-				$evaluate = $this->_evaluatePermissions($permKeys, array('id' => $aroId, 'alias' => $Aro->alias), $aco, $key);
+				$evaluate = $this->AclManager->evaluatePermissions($permKeys, array('id' => $aroId, 'alias' => $Aro->alias), $aco, $key);
 
 				$perms[str_replace('/', ':', $acoNode)][$Aro->alias . ":" . $aroId . '-inherit'] = $evaluate['inherited'];
 				$perms[str_replace('/', ':', $acoNode)][$Aro->alias . ":" . $aroId] = $evaluate['allowed'];
@@ -146,84 +160,6 @@ class AclManagerController extends AclManagerAppController {
 		$this->set(compact('acos', 'aros'));
 	}
 
-/**
- * Recursive function to find permissions avoiding slow $this->Acl->check().
- *
- * @return array 
- */
-	private function _evaluatePermissions($permKeys, $aro, $aco, $acoIndex) {
-		$permissions = Set::extract("/Aro[model={$aro['alias']}][foreign_key={$aro['id']}]/Permission/.", $aco);
-		$permissions = array_shift($permissions);
-
-		$allowed = false;
-		$inherited = false;
-		$inheritedPerms = array();
-		$allowedPerms = array();
-
-		/**
-		 * Manually checking permission
-		 * Part of this logic comes from DbAcl::check()
-		 */
-		foreach ($permKeys as $key) {
-			if (!empty($permissions)) {
-				if ($permissions[$key] == -1) {
-					$allowed = false;
-					break;
-				} elseif ($permissions[$key] == 1) {
-					$allowedPerms[$key] = 1;
-				} elseif ($permissions[$key] == 0) {
-					$inheritedPerms[$key] = 0;
-				}
-			} else {
-				$inheritedPerms[$key] = 0;
-			}
-		}
-
-		if (count($allowedPerms) === count($permKeys)) {
-			$allowed = true;
-		} elseif (count($inheritedPerms) === count($permKeys)) {
-			if ($aco['Aco']['parent_id'] == null) {
-				$acoNode = (isset($aco['Action'])) ? $aco['Action'] : null;
-				$aroNode = array('model' => $aro['alias'], 'foreign_key' => $aro['id']);
-				$allowed = $this->Acl->check($aroNode, $acoNode);
-				$this->acos[$acoIndex]['evaluated'][$aro['id']] = array(
-					'allowed' => $allowed,
-					'inherited' => true
-				);
-			} else {
-				/**
-				 * Do not use Set::extract here. First of all it is terribly slow,
-				 * besides this we need the aco array index ($key) to cache are result.
-				 */
-				foreach ($this->acos as $key => $a) {
-					if ($a['Aco']['id'] == $aco['Aco']['parent_id']) {
-						$parentAco = $a;
-						break;
-					}
-				}
-
-				// Return cached result if present
-				if (isset($parentAco['evaluated'][$aro['id']])) {
-					return $parentAco['evaluated'][$aro['id']];
-				}
-
-				// Perform lookup of parent aco
-				$evaluate = $this->_evaluatePermissions($permKeys, $aro, $parentAco, $key);
-
-				// Store result in acos array so we need less recursion for the next lookup
-				$this->acos[$key]['evaluated'][$aro['id']] = $evaluate;
-				$this->acos[$key]['evaluated'][$aro['id']]['inherited'] = true;
-
-				$allowed = $evaluate['allowed'];
-			}
-			$inherited = true;
-		}
-
-		return array(
-			'allowed' => $allowed,
-			'inherited' => $inherited,
-		);
-	}
 
 /**
  * Update ACOs
@@ -244,7 +180,7 @@ class AclManagerController extends AclManagerAppController {
 		$knownAcos = $this->_removeActionFromAcos($knownAcos, $aco);
 
 		// Loop around each controller and its actions
-		$allActions = $this->_getActions();
+		$allActions = $this->AclManager->getActions();
 		foreach ($allActions as $controller => $actions) {
 			if (empty($actions)) {
 				continue;
@@ -402,40 +338,6 @@ class AclManagerController extends AclManagerAppController {
 	}
 
 /**
- * Returns all the Actions found in the Controllers
- *
- * Ignores:
- * - protected and private methods (starting with _)
- * - Controller methods
- * - methods matching Configure::read('AclManager.ignoreActions')
- *
- * @return array('Controller' => array('action1', 'action2', ... ))
- */
-	protected function _getActions() {
-		$ignore = Configure::read('AclManager.ignoreActions');
-		$methods = get_class_methods('Controller');
-		foreach($methods as $method) {
-			$ignore[] = $method;
-		}
-
-		$controllers = $this->_getControllers();
-		$actions = array();
-		foreach ($controllers as $controller) {
-		    list($plugin, $name) = pluginSplit($controller);
-
-		    $methods = get_class_methods($name . "Controller");
-			$methods = array_diff($methods, $ignore);
-			foreach ($methods as $key => $method) {
-				if (strpos($method, "_") === 0 || in_array($controller . '/' . $method, $ignore)) {
-					unset($methods[$key]);
-				}
-			}
-			$actions[$controller] = $methods;
-		}
-		return $actions;
-	}
-
-/**
  * Returns all the ACOs including their path
  *
  * @return array
@@ -480,49 +382,6 @@ class AclManagerController extends AclManagerAppController {
 			$this->redirect($this->referer());
 		}
 		return $this->_authorizer;
-	}
-
-/**
- * Returns all the controllers from Cake and Plugins
- * Will only browse loaded plugins
- *
- * @return array('Controller1', 'Plugin.Controller2')
- */
-	protected function _getControllers() {
-
-		// Getting Cake controllers
-		$objects = array('Cake' => array());
-		$objects['Cake'] = App::objects('Controller');
-		$unsetIndex = array_search("AppController", $objects['Cake']);
-		if ($unsetIndex !== false) {
-			unset($objects['Cake'][$unsetIndex]);
-		}
-
-		// Getting Plugins controllers
-		$plugins = CakePlugin::loaded();
-		foreach ($plugins as $plugin) {
-			$objects[$plugin] = App::objects($plugin . '.Controller');
-			$unsetIndex = array_search($plugin . "AppController", $objects[$plugin]);
-			if ($unsetIndex !== false) {
-				unset($objects[$plugin][$unsetIndex]);
-			}
-		}
-
-		// Around each controller
-		$return = array();
-		foreach ($objects as $plugin => $controllers) {
-			$controllers = str_replace("Controller", "", $controllers);
-			foreach ($controllers as $controller) {
-				if ($plugin !== "Cake") {
-					$controller = $plugin . "." . $controller;
-				}
-				if (App::import('Controller', $controller)) {
-					$return[] = $controller;
-				}
-			}
-		}
-
-		return $return;
 	}
 
 /**
