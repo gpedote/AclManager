@@ -13,6 +13,7 @@
  * @license       MIT License (http://www.opensource.org/licenses/mit-license.php)
  */
 App::uses('AclManager', 'AclManager.Lib');
+App::uses('AclExtras', 'AclManager.Lib');
 
 class AclManagerController extends AclManagerAppController {
 
@@ -24,11 +25,18 @@ class AclManagerController extends AclManagerAppController {
 	public $AclManager;
 
 /**
+ * AclExtras instance
+ */
+	public $AclExtras;
+
+/**
  * Constructor
  */
 	public function __construct($request = null, $response = null) {
 		parent::__construct($request, $response);
 		$this->AclManager = new AclManager();
+		$this->AclExtras = new AclExtras();
+		$this->AclExtras->startup($this);
 	}
 
 /**
@@ -158,6 +166,17 @@ class AclManagerController extends AclManagerAppController {
 		$this->set('aroDisplayField', $Aro->displayField);
         $this->set('aroPk', $Aro->primaryKey );
 		$this->set(compact('acos', 'aros'));
+	}
+
+/**
+ * Update ACOs
+ * Sets the missing actions in the database
+ *
+ * @return void
+ */
+	public function updateAcos() {
+		$this->AclExtras->aco_sync();
+		$this->redirect($this->request->referer());
 	}
 
 /**
