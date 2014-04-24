@@ -183,7 +183,6 @@ class AclManagerController extends AclManagerAppController {
 			$allowed = true;
 		} elseif (count($inheritedPerms) === count($permKeys)) {
 			if ($aco['Aco']['parent_id'] == null) {
-				$this->lookup +=1;
 				$acoNode = (isset($aco['Action'])) ? $aco['Action'] : null;
 				$aroNode = array('model' => $aro['alias'], 'foreign_key' => $aro['id']);
 				$allowed = $this->Acl->check($aroNode, $acoNode);
