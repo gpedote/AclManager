@@ -160,79 +160,6 @@ class AclManagerController extends AclManagerAppController {
 		$this->set(compact('acos', 'aros'));
 	}
 
-
-/**
- * Update ACOs
- * Sets the missing actions in the database
- *
- * @return void
- */
-	public function updateAcos() {
-		$count = 0;
-		$knownAcos = $this->_getAcos();
-
-		// Root node
-		$aco = $this->_action(array(), '');
-		if (!$rootNode = $this->Acl->Aco->node($aco)) {
-			$rootNode = $this->_buildAcoNode($aco, null);
-			$count++;
-		}
-		$knownAcos = $this->_removeActionFromAcos($knownAcos, $aco);
-
-		// Loop around each controller and its actions
-		$allActions = $this->AclManager->getActions();
-		foreach ($allActions as $controller => $actions) {
-			if (empty($actions)) {
-				continue;
-			}
-
-			$parentNode = $rootNode;
-			list($plugin, $controller) = pluginSplit($controller);
-
-			// Plugin
-			$aco = $this->_action(array('plugin' => $plugin), '/:plugin/');
-			$aco = rtrim($aco, '/'); // Remove trailing slash
-			$newNode = $parentNode;
-			if ($plugin && !$newNode = $this->Acl->Aco->node($aco)) {
-				$newNode = $this->_buildAcoNode($plugin, $parentNode);
-				$count++;
-			}
-			$parentNode = $newNode;
-			$knownAcos = $this->_removeActionFromAcos($knownAcos, $aco);
-
-			// Controller
-			$aco = $this->_action(array('controller' => $controller, 'plugin' => $plugin), '/:plugin/:controller');
-			if (!$newNode = $this->Acl->Aco->node($aco)) {
-				$newNode = $this->_buildAcoNode($controller, $parentNode);
-				$count++;
-			}
-			$parentNode = $newNode;
-			$knownAcos = $this->_removeActionFromAcos($knownAcos, $aco);
-
-			// Actions
-			foreach ($actions as $action) {
-				$aco = $this->_action(array(
-					'controller' => $controller,
-					'action' => $action,
-					'plugin' => $plugin
-				));
-				if (!$node = $this->Acl->Aco->node($aco)) {
-					$this->_buildAcoNode($action, $parentNode);
-					$count++;
-				}
-				$knownAcos = $this->_removeActionFromAcos($knownAcos, $aco);
-			}
-		}
-
-		// Some ACOs are in the database but not in the controllers
-		if (count($knownAcos) > 0) {
-			$acoIds = Set::extract('/Aco/id', $knownAcos);
-			$this->Acl->Aco->deleteAll(array('Aco.id' => $acoIds));
-		}
-		$this->Session->setFlash(sprintf(__("%d ACOs have been created/updated"), $count), 'flash/success');
-		$this->redirect($this->request->referer());
-	}
-
 /**
  * Update AROs
  * Sets the missing AROs in the database
@@ -309,80 +236,7 @@ class AclManagerController extends AclManagerAppController {
 		$this->redirect($this->request->referer());
 	}
 
-/**
- * Gets the action from Authorizer
- *
- * @return String
- */
-	protected function _action($request = array(), $path = '/:plugin/:controller/:action') {
-		$plugin = empty($request['plugin']) ? null : Inflector::camelize($request['plugin']) . '/';
-		$params = array_merge(array('controller' => null, 'action' => null, 'plugin' => null), $request);
-		$request = new CakeRequest(null, false);
-		$request->addParams($params);
-		$authorizer = $this->_getAuthorizer();
-		return $authorizer->action($request, $path);
-	}
 
-/**
- * Build ACO node
- *
- * @return node
- */
-	protected function _buildAcoNode($alias, $parentId = null) {
-		if (is_array($parentId)) {
-			$parentId = $parentId[0]['Aco']['id'];
-		}
-		$this->Acl->Aco->create(array('alias' => $alias, 'parent_id' => $parentId));
-		$this->Acl->Aco->save();
-		return array(array('Aco' => array('id' => $this->Acl->Aco->id)));
-	}
-
-/**
- * Returns all the ACOs including their path
- *
- * @return array
- */
-	protected function _getAcos() {
-		$acos = $this->Acl->Aco->find('all', array('order' => 'Aco.lft ASC', 'recursive' => -1));
-		$parents = array();
-		foreach ($acos as $key => $data) {
-			$aco =& $acos[$key];
-			$id = $aco['Aco']['id'];
-
-			// Generate path
-			if ($aco['Aco']['parent_id'] && isset($parents[$aco['Aco']['parent_id']])) {
-				$parents[$id] = $parents[$aco['Aco']['parent_id']] . '/' . $aco['Aco']['alias'];
-			} else {
-				$parents[$id] = $aco['Aco']['alias'];
-			}
-			$aco['Aco']['action'] = $parents[$id];
-		}
-		return $acos;
-	}
-
-/**
- * Gets the Authorizer object from Auth
- *
- * @return authorizer object
- */
-	protected function _getAuthorizer() {
-		if (!is_null($this->_authorizer)) {
-			return $this->_authorizer;
-		}
-		$authorzeObjects = $this->Auth->_authorizeObjects;
-		foreach ($authorzeObjects as $object) {
-			if (!$object instanceOf ActionsAuthorize) {
-				continue;
-			}
-			$this->_authorizer = $object;
-			break;
-		}
-		if (empty($this->_authorizer)) {
-			$this->Session->setFlash(__("ActionAuthorizer could not be found"), 'flash/error');
-			$this->redirect($this->referer());
-		}
-		return $this->_authorizer;
-	}
 
 /**
  * Returns permissions keys in Permission schema
@@ -402,18 +256,4 @@ class AclManagerController extends AclManagerAppController {
 		return $newKeys;
 	}
 
-/**
- * Returns an array without the corresponding action
- *
- * @return array
- */
-	protected function _removeActionFromAcos($acos, $action) {
-		foreach ($acos as $key => $aco) {
-			if ($aco['Aco']['action'] == $action) {
-				unset($acos[$key]);
-				break;
-			}
-		}
-		return $acos;
-	}
 }
