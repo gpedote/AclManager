@@ -129,37 +129,10 @@ class AclManagerController extends AclManagerAppController {
 			$model = $model[0];
 		}
 
+		$acos = $this->Acl->Aco->find('all', array('order' => 'Aco.lft ASC', 'recursive' => 1));
 		$Aro = $this->{$model};
 		$aros = $this->Paginator->paginate($Aro->alias);
-		$permKeys = $this->_getKeys();
-
-		// Build permissions info
-		$perms = array();
-		$parents = array();
-		$acos = $this->Acl->Aco->find('all', array('order' => 'Aco.lft ASC', 'recursive' => 1));
-		foreach ($acos as $key => $data) {
-			$aco =& $acos[$key];
-			$aco = array('Aco' => $data['Aco'], 'Aro' => $data['Aro'], 'Action' => array());
-			$id = $aco['Aco']['id'];
-
-			// Generate path
-			if ($aco['Aco']['parent_id'] && isset($parents[$aco['Aco']['parent_id']])) {
-				$parents[$id] = $parents[$aco['Aco']['parent_id']] . '/' . $aco['Aco']['alias'];
-			} else {
-				$parents[$id] = $aco['Aco']['alias'];
-			}
-			$aco['Action'] = $parents[$id];
-
-			// Fetching permissions per ARO
-			$acoNode = $aco['Action'];
-			foreach($aros as $aro) {
-				$aroId = $aro[$Aro->alias][$Aro->primaryKey];
-				$evaluate = $this->AclManager->evaluatePermissions($permKeys, array('id' => $aroId, 'alias' => $Aro->alias), $aco, $key);
-
-				$perms[str_replace('/', ':', $acoNode)][$Aro->alias . ":" . $aroId . '-inherit'] = $evaluate['inherited'];
-				$perms[str_replace('/', ':', $acoNode)][$Aro->alias . ":" . $aroId] = $evaluate['allowed'];
-			}
-		}
+		$perms = $this->AclManager->buildPermissionsInfo($acos, $Aro, $aros);
 
 		$this->request->data = array('Perms' => $perms);
 		$this->set('aroAlias', $Aro->alias);
@@ -253,26 +226,6 @@ class AclManagerController extends AclManagerAppController {
 		}
 		$this->Session->setFlash(sprintf(__("%d AROs have been created"), $count), 'flash/success');
 		$this->redirect($this->request->referer());
-	}
-
-
-
-/**
- * Returns permissions keys in Permission schema
- *
- * @see DbAcl::_getKeys()
- * @return array permission keys
- */
-	protected function _getKeys() {
-		$keys = $this->Acl->Aro->Permission->schema();
-		$newKeys = array();
-		$keys = array_keys($keys);
-		foreach ($keys as $key) {
-			if (!in_array($key, array('id', 'aro_id', 'aco_id'))) {
-				$newKeys[] = $key;
-			}
-		}
-		return $newKeys;
 	}
 
 }

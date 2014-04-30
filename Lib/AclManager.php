@@ -21,8 +21,6 @@ class AclManager extends Object {
  */
     public $Acl;
 
-    public $acos = array();
-
 /**
  * Constructor
  */
@@ -35,7 +33,6 @@ class AclManager extends Object {
         $this->Acl->startup($controller);
         $this->Aco = $this->Acl->Aco;
         $this->controller = $controller;
-        $this->acos = $acos = $this->Aco->find('all', array('order' => 'Aco.lft ASC', 'recursive' => 1));;
     }
 
 /**
@@ -120,7 +117,7 @@ class AclManager extends Object {
  *
  * @return array 
  */
-    public function evaluatePermissions($permKeys, $aro, $aco, $acoIndex) {
+    public function evaluatePermissions($permKeys, $aro, $aco, $acoIndex, $acos) {
         $permissions = Set::extract("/Aro[model={$aro['alias']}][foreign_key={$aro['id']}]/Permission/.", $aco);
         $permissions = array_shift($permissions);
 
@@ -155,7 +152,7 @@ class AclManager extends Object {
                 $acoNode = (isset($aco['Action'])) ? $aco['Action'] : null;
                 $aroNode = array('model' => $aro['alias'], 'foreign_key' => $aro['id']);
                 $allowed = $this->Acl->check($aroNode, $acoNode);
-                $this->acos[$acoIndex]['evaluated'][$aro['id']] = array(
+                $acos[$acoIndex]['evaluated'][$aro['id']] = array(
                     'allowed' => $allowed,
                     'inherited' => true
                 );
@@ -164,7 +161,7 @@ class AclManager extends Object {
                  * Do not use Set::extract here. First of all it is terribly slow,
                  * besides this we need the aco array index ($key) to cache are result.
                  */
-                foreach ($this->acos as $key => $a) {
+                foreach ($acos as $key => $a) {
                     if ($a['Aco']['id'] == $aco['Aco']['parent_id']) {
                         $parentAco = $a;
                         break;
@@ -177,7 +174,7 @@ class AclManager extends Object {
                 }
 
                 // Perform lookup of parent aco
-                $evaluate = $this->evaluatePermissions($permKeys, $aro, $parentAco, $key);
+                $evaluate = $this->evaluatePermissions($permKeys, $aro, $parentAco, $key, $acos);
 
                 // Store result in acos array so we need less recursion for the next lookup
                 $this->acos[$key]['evaluated'][$aro['id']] = $evaluate;
@@ -192,6 +189,61 @@ class AclManager extends Object {
             'allowed' => $allowed,
             'inherited' => $inherited,
         );
+    }
+
+/**
+ * Build permissions info
+ *
+ * @return array 
+ */
+    public function buildPermissionsInfo(&$acos = null, $Aro = null, $aros = null) {
+        $perms = array();
+        $parents = array();
+        $permKeys = $this->_getKeys();
+
+        foreach ($acos as $key => $data) {
+            $aco =& $acos[$key];
+            $aco = array('Aco' => $data['Aco'], 'Aro' => $data['Aro'], 'Action' => array());
+            $id = $aco['Aco']['id'];
+
+            // Generate path
+            if ($aco['Aco']['parent_id'] && isset($parents[$aco['Aco']['parent_id']])) {
+                $parents[$id] = $parents[$aco['Aco']['parent_id']] . '/' . $aco['Aco']['alias'];
+            } else {
+                $parents[$id] = $aco['Aco']['alias'];
+            }
+            $aco['Action'] = $parents[$id];
+
+            // Fetching permissions per ARO
+            $acoNode = $aco['Action'];
+            foreach($aros as $aro) {
+                $aroId = $aro[$Aro->alias][$Aro->primaryKey];
+                $evaluate = $this->evaluatePermissions($permKeys, array('id' => $aroId, 'alias' => $Aro->alias), $aco, $key, $acos);
+
+                $perms[str_replace('/', ':', $acoNode)][$Aro->alias . ":" . $aroId . '-inherit'] = $evaluate['inherited'];
+                $perms[str_replace('/', ':', $acoNode)][$Aro->alias . ":" . $aroId] = $evaluate['allowed'];
+            }
+        }
+
+        return $perms;
+    }
+
+/**
+ * Returns permissions keys in Permission schema
+ *
+ * @see DbAcl::_getKeys()
+ * @return array permission keys
+ */
+    protected function _getKeys() {
+        $keys = $this->Acl->Aro->Permission->schema();
+        $newKeys = array();
+        $keys = array_keys($keys);
+        foreach ($keys as $key) {
+            if (!in_array($key, array('id', 'aro_id', 'aco_id'))) {
+                $newKeys[] = $key;
+            }
+        }
+        return $newKeys;
     }
 
 }
