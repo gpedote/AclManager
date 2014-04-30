@@ -53,7 +53,7 @@ foreach ($aroModels as $aroModel): ?>
 	$action = $aco['Action'];
 
 	// Check if is a parent ACO
-	$isParent = (substr_count($action, '/') === 1) ? (true) : (false);
+	$isParent = (substr_count($action, '/') === 1 || substr_count($action, '/') === 0) ? (true) : (false);
 	if ($isParent) {
 		$dataLevel++;
 	}

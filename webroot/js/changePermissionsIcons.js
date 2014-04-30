@@ -19,7 +19,7 @@ if (typeof jQuery != 'undefined') {
 	        dataParent = tableCell.attr('data-parent');
 
 	        $('td').each(function () {
-	            if ($(this).attr('data-level') == dataLevel 
+	            if (($(this).attr('data-level') == dataLevel || dataLevel == 1)
 	                && $(this).attr('data-parent') == dataParent) {
 	                $(this).children('i') .removeClass();
 	                switch (select.val()) {
