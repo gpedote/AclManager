@@ -17,8 +17,6 @@ App::uses('AclExtras', 'AclManager.Lib');
 
 class AclManagerController extends AclManagerAppController {
 
-    protected $_authorizer = null;
-
 /**
  * AclManager instance
  */
