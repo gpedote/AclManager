@@ -7,6 +7,7 @@
 App::uses('Controller', 'Controller');
 App::uses('ComponentCollection', 'Controller');
 App::uses('AclComponent', 'Controller/Component');
+App::uses('SessionComponent', 'Controller/Component');
 
 /**
  * Generic acl methods
@@ -32,6 +33,7 @@ class AclManager extends Object {
         $this->Acl = new AclComponent($collection);
         $this->Acl->startup($controller);
         $this->Aco = $this->Acl->Aco;
+        $this->Session = new SessionComponent($collection);
         $this->controller = $controller;
     }
 
@@ -201,6 +203,10 @@ class AclManager extends Object {
         $parents = array();
         $permKeys = $this->_getKeys();
 
+        if (empty($acos)) {
+            $acos = $this->Acl->Aco->find('all', array('order' => 'Aco.lft ASC', 'recursive' => 1));
+        }
+
         foreach ($acos as $key => $data) {
             $aco =& $acos[$key];
             $aco = array('Aco' => $data['Aco'], 'Aro' => $data['Aro'], 'Action' => array());
@@ -229,6 +235,26 @@ class AclManager extends Object {
     }
 
 /**
+ * Build permissions info based on one aro
+ *
+ * @return array 
+ */
+    public function buildPermissionsAro($model = null, $aro = null) {
+        if (empty($model) || empty($aro)) {
+            return false;
+        }
+
+        $this->controller->loadModel($model);
+
+        $Aro = $this->controller->{$model};
+
+        $tmp = array();
+        $perms = $this->buildPermissionsInfo($tmp, $Aro, array(0 => $aro));
+
+        $this->Session->write('AclManager.permissions', $perms);
+    }
+
+/**
  * Returns permissions keys in Permission schema
  *
  * @see DbAcl::_getKeys()
@@ -244,6 +270,75 @@ class AclManager extends Object {
             }
         }
         return $newKeys;
+    }
+
+/**
+ * Loads all permissions of the authenticated user in Session
+ *
+ * @return boolean
+ */
+    protected function __loadPermissions() {
+        $user = $this->Session->read('Auth');
+            
+        if (empty($user) || isset($user['redirect'])) {
+            return false;
+        }
+        $model = key($user);
+
+        $this->buildPermissionsAro($model, $user);
+        return true;
+    }
+
+/**
+ * Check if the current logged user has access to the url
+ *
+ * @return boolean
+ */
+    public function checkPermission($url = null) {
+        if (empty($url)) {
+            return false;
+        }
+
+        if (!$this->Session->check('AclManager.permissions')) {
+            $loaded = $this->__loadPermissions();
+            if (!$loaded) {
+                return true;
+            }
+        }
+
+        $url = Router::url($url);
+        $parsedUrl = Router::parse($url);
+
+        $aco = '';
+        if (!empty($parsedUrl['plugin'])) {
+            $format = '%s:%s:%s:%s';
+            $aco = sprintf($format, 
+                'controllers',
+                Inflector::camelize($parsedUrl['plugin']),
+                Inflector::camelize($parsedUrl['controller']),
+                $parsedUrl['action']
+            );
+        } else {
+            $format = '%s:%s:%s';
+            $aco = sprintf($format, 
+                'controllers',
+                Inflector::camelize($parsedUrl['controller']),
+                $parsedUrl['action']
+            );
+        }
+        
+        $aro = $this->Session->read('Auth');
+        if (empty($aro)) {
+            return false;
+        }
+
+        $model = key($aro);
+        $path = 'AclManager.permissions.' . $aco . '.'. $model.':' . $aro[$model]['id'];
+
+        if ($this->Session->check($path)) {
+            return $this->Session->read($path);
+        }
+        return false;
     }
 
 }
