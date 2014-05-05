@@ -92,21 +92,27 @@ class AclManager extends Object {
  */
     public function getActions() {
         $ignore = Configure::read('AclManager.ignoreActions');
-        $methods = get_class_methods('Controller');
-        foreach($methods as $method) {
-            $ignore[] = $method;
-        }
-
+        $baseMethods = get_class_methods('Controller');
+        
         $controllers = $this->getControllers();
         $actions = array();
         foreach ($controllers as $controller) {
             list($plugin, $name) = pluginSplit($controller);
 
-            $methods = get_class_methods($name . "Controller");
-            $methods = array_diff($methods, $ignore);
+            $classMethods = get_class_methods($name . "Controller");
+            $methods = array_diff($classMethods, $baseMethods);
+
             foreach ($methods as $key => $method) {
-                if (strpos($method, "_") === 0 || in_array($controller . '/' . $method, $ignore)) {
+                if (strpos($method, "_", 0) === 0) {
                     unset($methods[$key]);
+                    continue;
+                }
+
+                foreach ($ignore as $k){
+                    if (preg_match($k, $method)) {
+                        unset($methods[$key]);
+                        break;
+                    }
                 }
             }
             $actions[$controller] = $methods;
@@ -207,7 +213,20 @@ class AclManager extends Object {
             $acos = $this->Acl->Aco->find('all', array('order' => 'Aco.lft ASC', 'recursive' => 1));
         }
 
+        $ignore = Configure::read('AclManager.ignoreActions');
         foreach ($acos as $key => $data) {
+            // Ignore actions
+            $skip = false;
+            foreach ($ignore as $regex){
+                if (preg_match($regex, $acos[$key]['Aco']['alias'])) {
+                    $skip = true;    
+                }
+            }
+            if ($skip) {
+                unset($acos[$key]);
+                continue;
+            }
+
             $aco =& $acos[$key];
             $aco = array('Aco' => $data['Aco'], 'Aro' => $data['Aro'], 'Action' => array());
             $id = $aco['Aco']['id'];
@@ -219,6 +238,8 @@ class AclManager extends Object {
                 $parents[$id] = $aco['Aco']['alias'];
             }
             $aco['Action'] = $parents[$id];
+
+            
 
             // Fetching permissions per ARO
             $acoNode = $aco['Action'];

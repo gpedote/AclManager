@@ -40,9 +40,9 @@ Configure::write('AclManager.aro_aliases', array('Group' => 'name', 'User' => 'u
 
 /**
  * Actions to ignore when looking for new ACOs
- * Format: 'action', 'Controller/action' or 'Plugin.Controller/action'
+ * Format: A regex to match the action
  */
-Configure::write('AclManager.ignoreActions', array('isAuthorized'));
+Configure::write('AclManager.ignoreActions', array('/isAuthorized/'));
 
 /**
  * List of ARO models to load
