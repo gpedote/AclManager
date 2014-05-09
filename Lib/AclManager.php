@@ -266,13 +266,9 @@ class AclManager extends Object {
         }
 
         $this->controller->loadModel($model);
-
         $Aro = $this->controller->{$model};
-
         $tmp = array();
-        $perms = $this->buildPermissionsInfo($tmp, $Aro, array(0 => $aro));
-
-        $this->Session->write('AclManager.permissions', $perms);
+        return $this->buildPermissionsInfo($tmp, $Aro, array(0 => $aro));
     }
 
 /**
@@ -296,38 +292,51 @@ class AclManager extends Object {
 /**
  * Loads all permissions of the authenticated user in Session
  *
+ * @param array $user The user to check the authorization of.
  * @return boolean
  */
-    protected function __loadPermissions() {
-        $user = $this->Session->read('Auth');
-            
-        if (empty($user) || isset($user['redirect'])) {
+    protected function __loadPermissions($user = null) {
+        if (empty($user)) {
             return false;
         }
         $model = key($user);
 
-        $this->buildPermissionsAro($model, $user);
+        $perms = $this->buildPermissionsAro($model, $user);
+        $sessionPath = 'AclManager.permissions.' . $model . '.' . $user[$model]['id'];
+        $this->Session->write($sessionPath, $perms);
         return true;
     }
 
 /**
  * Check if the current logged user has access to the url
  *
+ * @param array $url Url to check if the user has access based on the Acl
+ * @param array $user The user to check the authorization of. If empty the user in the session will be used.
  * @return boolean
  */
-    public function checkPermission($url = null) {
+    public function checkPermission($url = null, $user = null) {
         if (empty($url)) {
             return false;
         }
 
-        if (!$this->Session->check('AclManager.permissions')) {
-            $loaded = $this->__loadPermissions();
+        if (empty($user)) {
+            $user = $this->Session->read('Auth');
+        }
+        if (empty($user) || isset($user['redirect'])) {
+            return false;
+        }
+        $model = key($user);
+
+        $sessionPath = 'AclManager.permissions.' . $model . '.' . $user[$model]['id'];
+        if (!$this->Session->check($sessionPath)) {
+            $loaded = $this->__loadPermissions($user);
             if (!$loaded) {
                 return true;
             }
         }
 
         $url = Router::url($url);
+
         $parsedUrl = Router::parse($url);
 
         $aco = '';
@@ -348,13 +357,8 @@ class AclManager extends Object {
             );
         }
         
-        $aro = $this->Session->read('Auth');
-        if (empty($aro)) {
-            return false;
-        }
-
-        $model = key($aro);
-        $path = 'AclManager.permissions.' . $aco . '.'. $model.':' . $aro[$model]['id'];
+        $sessionPath = 'AclManager.permissions.' . $model . '.' . $user[$model]['id'];
+        $path = $sessionPath . '.' . $aco . '.'. $model. ':' . $user[$model]['id'];
 
         if ($this->Session->check($path)) {
             return $this->Session->read($path);
